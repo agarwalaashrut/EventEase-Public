@@ -23,6 +23,8 @@ class Event:
         self.status = data.get('status', 'pending')  # pending, confirmed, cancelled
         self.created_at = data.get('created_at', datetime.utcnow())
         self.votes = data.get('votes', {})  # {email: [time_slot_indexes]}
+        self.invites = data.get('invites', [])  # List of UserIDs
+        
     
     def to_dict(self) -> dict:
         """Convert Event to dictionary for JSON serialization"""
