@@ -26,6 +26,10 @@ export const api = {
       const response = await fetch(`${API_BASE_URL}/api/events`);
       return response.json();
     },
+    getById: async (eventId) => {
+      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}`);
+      return response.json();
+    },
     create: async (eventData) => {
       const response = await fetch(`${API_BASE_URL}/api/events`, {
         method: 'POST',
