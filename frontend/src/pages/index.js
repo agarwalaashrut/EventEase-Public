@@ -1,6 +1,9 @@
-// Pages module initialization
-// Page components
-// Example: LoginPage, CreateEventPage, EventDetailsPage, VotingPage
+import EventsPage from './EventsPage';
+import HomePage from './HomePage';
+import EventDetailPage from './EventDetailPage';
 
-export {};
-
+export {
+    EventsPage,
+    HomePage,
+    EventDetailPage
+};

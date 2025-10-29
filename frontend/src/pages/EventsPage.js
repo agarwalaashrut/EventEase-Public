@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, Button, Container, Row, Col, Badge, Spinner, Alert } from 'react-bootstrap';
 import api from '../services/api';
 
 function EventsPage() {
+  const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -130,7 +132,11 @@ function EventsPage() {
                   )}
 
                   <div className="d-grid gap-2">
-                    <Button variant="outline-primary" size="sm">
+                    <Button 
+                      variant="outline-primary" 
+                      size="sm"
+                      onClick={() => navigate(`/events/${event._id}`)}
+                    >
                       View Details
                     </Button>
                   </div>
