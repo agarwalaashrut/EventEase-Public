@@ -39,7 +39,8 @@ class Event:
             'attendees': self.attendees,
             'status': self.status,
             'created_at': self.created_at.isoformat() if isinstance(self.created_at, datetime) else self.created_at,
-            'votes': self.votes
+            'votes': self.votes,
+            'invites': self.invites
         }
     
     def to_mongo(self) -> dict:
@@ -54,7 +55,8 @@ class Event:
             'attendees': self.attendees,
             'status': self.status,
             'created_at': self.created_at,
-            'votes': self.votes
+            'votes': self.votes,
+            'invites': self.invites
         }
         if self._id:
             doc['_id'] = self._id
