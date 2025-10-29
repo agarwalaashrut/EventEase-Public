@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Suggestions from "./pages/Suggestions";
+import PollsPage from "../../src/pages/Polls";
 
 import EventForm from "./pages/EventCreation";
 
