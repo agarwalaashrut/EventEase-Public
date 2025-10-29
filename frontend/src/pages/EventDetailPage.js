@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Container, Row, Col, Card, Badge, Button, Spinner, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Card, Badge, Button, Spinner, Alert, Form } from 'react-bootstrap';
 import api from '../services/api';
 
 function EventDetailPage() {
@@ -9,6 +9,11 @@ function EventDetailPage() {
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const [suggestions, setSuggestions] = useState([]);
+  const [dateMMDD, setDateMMDD] = useState('');
+  const [timeHHMM, setTimeHHMM] = useState('');
+  const [suggestedLocation, setSuggestedLocation] = useState('');
 
   useEffect(() => {
     fetchEventDetails();
@@ -95,14 +100,14 @@ function EventDetailPage() {
               <h5>Description</h5>
               <p className="mb-4">{event.description}</p>
 
-              <h5>📍 Location</h5>
+              <h5>Location</h5>
               <p className="mb-4">{event.location}</p>
 
-              <h5>👤 Organizer</h5>
+              <h5>Organizer</h5>
               <p>{event.organizer}</p>
               <p className="text-muted mb-4">{event.organizer_email}</p>
 
-              <h5>⏰ Proposed Times</h5>
+              <h5>Proposed Times</h5>
               {event.proposed_times && event.proposed_times.length > 0 ? (
                 <ul className="list-unstyled">
                   {event.proposed_times.map((time, idx) => (
@@ -114,12 +119,82 @@ function EventDetailPage() {
               ) : (
                 <p className="text-muted">No times proposed yet</p>
               )}
+
+              <hr />
+              <h5 className="mt-4">Suggest a Time or Location</h5>
+              <Form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!dateMMDD && !timeHHMM && !suggestedLocation) return;
+                  const combined = dateMMDD && timeHHMM ? `${dateMMDD} ${timeHHMM}` : (dateMMDD || timeHHMM || null);
+                  const newSuggestion = {
+                    time: combined,
+                    location: suggestedLocation || null
+                  };
+                  setSuggestions([...suggestions, newSuggestion]);
+                  setDateMMDD('');
+                  setTimeHHMM('');
+                  setSuggestedLocation('');
+                }}
+              >
+                <Row className="g-2 align-items-end">
+                  <Col md={4}>
+                    <Form.Group controlId="dateMMDD">
+                      <Form.Label>Date (MM/DD)</Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="e.g., 11/08"
+                        value={dateMMDD}
+                        onChange={(e) => setDateMMDD(e.target.value)}
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={4}>
+                    <Form.Group controlId="timeHHMM">
+                      <Form.Label>Time</Form.Label>
+                      <Form.Control
+                        type="time"
+                        value={timeHHMM}
+                        onChange={(e) => setTimeHHMM(e.target.value)}
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={4}>
+                    <Form.Group controlId="suggestedLocation">
+                      <Form.Label>Suggested Location</Form.Label>
+                      <Form.Control
+                        type="text"
+                        placeholder="Enter a location"
+                        value={suggestedLocation}
+                        onChange={(e) => setSuggestedLocation(e.target.value)}
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
+                <Button type="submit" variant="primary" className="mt-3">
+                  Add Suggestion
+                </Button>
+              </Form>
+
+              {suggestions.length > 0 && (
+                <>
+                  <h6 className="mt-4">Your Suggestions</h6>
+                  <ul className="list-unstyled">
+                    {suggestions.map((s, idx) => (
+                      <li key={idx} className="mb-2">
+                        {s.time && <div>Time: {s.time}</div>}
+                        {s.location && <div>Location: {s.location}</div>}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
             </Col>
 
             <Col md={4}>
               <Card className="mb-4">
                 <Card.Body>
-                  <h5>👥 Attendees ({event.attendees?.length || 0})</h5>
+                  <h5>Attendees ({event.attendees?.length || 0})</h5>
                   {event.attendees && event.attendees.length > 0 ? (
                     <ul className="list-unstyled">
                       {event.attendees.map((attendee, idx) => (
