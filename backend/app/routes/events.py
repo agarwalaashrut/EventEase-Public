@@ -132,6 +132,7 @@ def invite_to_event(event_id):
     """
     try:
         from bson.objectid import ObjectId
+        from app.services.email_service import send_invitation_email
         
         data = request.get_json()
         emails = data.get('emails', [])
@@ -165,28 +166,24 @@ def invite_to_event(event_id):
                 not_found_emails.append(email)
                 continue
             
-            # Create invitation object
-            invitation = {
-                'event_id': str(event_doc['_id']),
-                'event_title': event_doc['title'],
-                'organizer': event_doc['organizer'],
-                'status': 'pending',
-                'invited_at': Event.get_timestamp()
-            }
+            # Add to user's invitations if not already invited (store event_id as string)
+            event_id_str = str(event_doc['_id'])
+            existing_invitations = user.get('invitations', [])
             
-            # Add to user's invitations if not already invited
-            existing_invitation = next(
-                (inv for inv in user.get('invitations', []) 
-                 if inv['event_id'] == str(event_doc['_id'])),
-                None
-            )
-            
-            if not existing_invitation:
+            if event_id_str not in existing_invitations:
                 users_collection.update_one(
                     {'_id': user['_id']},
-                    {'$push': {'invitations': invitation}}
+                    {'$push': {'invitations': event_id_str}}
                 )
                 invited_users.append(email)
+                
+                # Send invitation email
+                send_invitation_email(
+                    email,
+                    event_doc['title'],
+                    event_doc['organizer'],
+                    event_id_str
+                )
         
         return jsonify({
             'success': True,
