@@ -68,6 +68,54 @@ export const api = {
     },
   },
 
+  // Voting endpoints
+  voting: {
+    /**
+     * POST /api/events/:id/vote
+     * Required: { user_email, time_slot_indexes: [0, 1] }
+     * Returns: { success: true, message, votes: {...} }
+     */
+    submitVote: async (eventId, userEmail, timeSlotIndexes) => {
+      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/vote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_email: userEmail,
+          time_slot_indexes: timeSlotIndexes,
+        }),
+      });
+      return response.json();
+    },
+
+    /**
+     * GET /api/events/:id/votes
+     * Returns: { success: true, votes_by_user: {...}, votes_by_time_slot: {...}, 
+     *           popular_time_slots: [...], total_votes: number, total_participants: number }
+     */
+    getVotingResults: async (eventId) => {
+      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/votes`);
+      return response.json();
+    },
+
+    /**
+     * POST /api/events/:id/finalize
+     * Optional: { time_slot_index: 0 }
+     * Returns: { success: true, message, finalized_time_slot_index, finalized_time_slot, event: {...} }
+     */
+    finalizeEvent: async (eventId, timeSlotIndex = null) => {
+      const body = {};
+      if (timeSlotIndex !== null) {
+        body.time_slot_index = timeSlotIndex;
+      }
+      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/finalize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return response.json();
+    },
+  },
+
   // Users endpoints
   users: {
     /**
