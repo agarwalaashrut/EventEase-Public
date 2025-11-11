@@ -33,6 +33,10 @@ def create_app(config_name=None):
         async_mode='eventlet'
     )
     
+    # Initialize Email service
+    from app.services.email_service import init_mail
+    init_mail(app)
+    
     # Register blueprints
     from app.routes import events_bp, health_bp, users_bp, invitations_bp
     app.register_blueprint(health_bp)

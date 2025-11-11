@@ -83,6 +83,8 @@ def respond_to_invitation(invitation_id):
     response: "accepted" or "declined"
     """
     try:
+        from app.services.email_service import send_response_notification
+        
         data = request.get_json()
         email = data.get('email')
         response = data.get('response')
@@ -119,6 +121,9 @@ def respond_to_invitation(invitation_id):
                 'error': 'Invitation not found'
             }), 404
         
+        # Get event details for notification
+        event_doc = events_collection.find_one({'_id': ObjectId(invitation_id)})
+        
         # Remove invitation from user's list
         users_collection.update_one(
             {'email': email},
@@ -130,6 +135,16 @@ def respond_to_invitation(invitation_id):
             events_collection.update_one(
                 {'_id': ObjectId(invitation_id)},
                 {'$addToSet': {'attendees': email}}
+            )
+        
+        # Send notification email to organizer
+        if event_doc:
+            send_response_notification(
+                event_doc.get('organizer_email'),
+                user_doc.get('name', 'A user'),
+                email,
+                event_doc.get('title'),
+                response
             )
         
         return jsonify({
