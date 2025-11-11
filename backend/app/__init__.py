@@ -32,6 +32,9 @@ def create_app(config_name=None):
         cors_allowed_origins=app.config['CORS_ORIGINS'],
         async_mode='eventlet'
     )
+     # Initialize Email service
+    from app.services.email_service import init_mail
+    init_mail(app)
     
     # Register blueprints
     from app.routes import events_bp, health_bp, users_bp, invitations_bp, voting_bp
