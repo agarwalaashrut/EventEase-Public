@@ -14,3 +14,4 @@ def health_check():
 # Import blueprints
 from .events import events_bp
 from .users import users_bp
+from .invitations import invitations_bp

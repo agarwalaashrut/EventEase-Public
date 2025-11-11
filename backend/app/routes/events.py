@@ -123,6 +123,85 @@ def create_event():
         }), 500
 
 
+@events_bp.route('/<event_id>/invite', methods=['POST'])
+def invite_to_event(event_id):
+    """
+    Send invitations to users for an event
+    POST /api/events/<event_id>/invite
+    Body: {emails: ["user1@example.com", "user2@example.com"]}
+    """
+    try:
+        from bson.objectid import ObjectId
+        
+        data = request.get_json()
+        emails = data.get('emails', [])
+        
+        if not emails or not isinstance(emails, list):
+            return jsonify({
+                'success': False,
+                'error': 'emails array is required'
+            }), 400
+        
+        db = get_db()
+        events_collection = db['Events']
+        users_collection = db['Users']
+        
+        # Verify event exists
+        event_doc = events_collection.find_one({'_id': ObjectId(event_id)})
+        if not event_doc:
+            return jsonify({
+                'success': False,
+                'error': 'Event not found'
+            }), 404
+        
+        invited_users = []
+        not_found_emails = []
+        
+        # Add invitation to each user
+        for email in emails:
+            user = users_collection.find_one({'email': email})
+            
+            if not user:
+                not_found_emails.append(email)
+                continue
+            
+            # Create invitation object
+            invitation = {
+                'event_id': str(event_doc['_id']),
+                'event_title': event_doc['title'],
+                'organizer': event_doc['organizer'],
+                'status': 'pending',
+                'invited_at': Event.get_timestamp()
+            }
+            
+            # Add to user's invitations if not already invited
+            existing_invitation = next(
+                (inv for inv in user.get('invitations', []) 
+                 if inv['event_id'] == str(event_doc['_id'])),
+                None
+            )
+            
+            if not existing_invitation:
+                users_collection.update_one(
+                    {'_id': user['_id']},
+                    {'$push': {'invitations': invitation}}
+                )
+                invited_users.append(email)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Invited {len(invited_users)} users',
+            'invited': invited_users,
+            'not_found': not_found_emails
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 @events_bp.route('/<event_id>', methods=['PUT'])
 def update_event(event_id):
     """

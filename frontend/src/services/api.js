@@ -53,6 +53,19 @@ export const api = {
       });
       return response.json();
     },
+    /**
+     * POST /api/events/:id/invite
+     * Required: { emails: ["user1@example.com", "user2@example.com"] }
+     * Returns: { success: true, message, invited: [...], not_found: [...] }
+     */
+    invite: async (eventId, emails) => {
+      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emails }),
+      });
+      return response.json();
+    },
   },
 
   // Users endpoints
@@ -92,6 +105,34 @@ export const api = {
     // Future implementation:
     // OAuth endpoint available on backend at POST /api/users/oauth/login
     // Required: { provider, oauth_id, email, name }
+  },
+
+  // Invitations endpoints
+  invitations: {
+    /**
+     * GET /api/invitations?email=user@example.com
+     * Required query param: email
+     * Returns: { success: true, invitations: [{event_id, event_title, organizer, status, invited_at, event_details: {...}}] }
+     */
+    getForUser: async (email) => {
+      const response = await fetch(`${API_BASE_URL}/api/invitations?email=${encodeURIComponent(email)}`);
+      return response.json();
+    },
+
+    /**
+     * POST /api/invitations/:id/respond
+     * Required: { email, response: "accepted" | "declined" }
+     * Returns: { success: true, message }
+     * Note: Updates user's invitations array and event's attendees list
+     */
+    respond: async (invitationId, email, responseType) => {
+      const response = await fetch(`${API_BASE_URL}/api/invitations/${invitationId}/respond`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, response: responseType }),
+      });
+      return response.json();
+    },
   },
 };
 
