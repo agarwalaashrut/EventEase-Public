@@ -22,18 +22,18 @@ class Event:
         self.attendees = data.get('attendees', [])
         self.status = data.get('status', 'pending')  # pending, confirmed, cancelled
         self.created_at = data.get('created_at', datetime.utcnow())
-        self.votes = data.get('votes', {})  # {email: [time_slot_indexes]}
+        self.votes = data.get('votes', {})  # {email: time_slot_index}
         self.invites = data.get('invites', [])  # List of UserIDs
         self.finalized_time_slot = data.get('finalized_time_slot', None)
         
-    def add_vote(self, user_email: str, time_slot_indexes: List[int]) -> None:
+    def add_vote(self, user_email: str, time_slot_index: int) -> None:
         """
-        Add or update a vote for a user
+        Add or update a vote for a user (single time slot only)
         Args:
             user_email: Email of the user voting
-            time_slot_indexes: List of indices of preferred time slots
+            time_slot_index: Index of preferred time slot
         """
-        self.votes[user_email] = time_slot_indexes
+        self.votes[user_email] = time_slot_index
     
     def get_vote_aggregation(self) -> Dict[int, int]:
         """
@@ -42,9 +42,9 @@ class Event:
         """
         time_slot_votes = {}
         
-        for user_email, indexes in self.votes.items():
-            for index in indexes:
-                time_slot_votes[index] = time_slot_votes.get(index, 0) + 1
+        for user_email, slot_index in self.votes.items():
+            if isinstance(slot_index, int):
+                time_slot_votes[slot_index] = time_slot_votes.get(slot_index, 0) + 1
         
         return time_slot_votes
     
