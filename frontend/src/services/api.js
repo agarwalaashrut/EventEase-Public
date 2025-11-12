@@ -139,16 +139,29 @@ export const api = {
   voting: {
     /**
      * POST /api/events/:id/vote
-     * Required: { user_email, time_slot_indexes: [0, 2] }
-     * Returns: { success: true, message, votes: {...} }
+     * Submit a vote for a single time slot. User can change their vote by calling again.
+     * 
+     * When to call:
+     * - When user selects a single preferred time slot and clicks "Vote"
+     * - When user changes their vote (submitting replaces the previous vote)
+     * 
+     * Required: { user_email, time_slot_index: 0 }
+     * Returns: { success: true, message, votes: {...all votes}, tallies: {0: 2, 1: 1, 2: 2} }
+     * 
+     * Example:
+     * const result = await api.voting.submitVote(
+     *   "event123",
+     *   "alice@company.com",
+     *   1  // Single slot index
+     * );
      */
-    submitVote: async (eventId, userEmail, timeSlotIndexes) => {
+    submitVote: async (eventId, userEmail, timeSlotIndex) => {
       const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/vote`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_email: userEmail,
-          time_slot_indexes: timeSlotIndexes,
+          time_slot_index: timeSlotIndex,
         }),
       });
       return response.json();
@@ -156,7 +169,42 @@ export const api = {
 
     /**
      * GET /api/events/:id/votes
-     * Returns: { success: true, votes_by_user, votes_by_time_slot, popular_time_slots, total_votes, total_participants, proposed_times }
+     * Get comprehensive voting results and statistics.
+     * 
+     * When to call:
+     * - After submitting a vote to see updated tallies
+     * - Periodically to refresh voting board/results page
+     * - To determine current winning time slot before finalization
+     * - Before the organizer finalizes the event
+     * 
+     * Returns: {
+     *   success: true,
+     *   votes_by_user: { "alice@ex.com": 0, "bob@ex.com": 1 },
+     *   votes_by_time_slot: { 0: 2, 1: 1, 2: 1 },
+     *   popular_time_slots: [
+     *     { time_slot_index: 0, vote_count: 2, time_slot: "2025-11-14T10:00" },
+     *     { time_slot_index: 1, vote_count: 1, time_slot: "2025-11-14T14:00" },
+     *     { time_slot_index: 2, vote_count: 1, time_slot: "2025-11-15T10:00" }
+     *   ],
+     *   winner: 0,
+     *   winner_context: {
+     *     reason: "clear_winner",
+     *     candidates: [0],
+     *     total_votes: 4,
+     *     total_participants: 3
+     *   },
+     *   total_votes: 4,
+     *   total_participants: 3,
+     *   proposed_times: ["2025-11-14T10:00", "2025-11-14T14:00", "2025-11-15T10:00"]
+     * }
+     * 
+     * Example:
+     * const results = await api.voting.getVotingResults("event123");
+     * console.log(`Most popular: ${results.popular_time_slots[0].time_slot}`);
+     * console.log(`Current winner: slot ${results.winner}`);
+     * if (results.winner_context.reason === 'no_votes') {
+     *   console.log('No votes yet - voting is in progress');
+     * }
      */
     getVotingResults: async (eventId) => {
       const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/votes`);
@@ -165,8 +213,45 @@ export const api = {
 
     /**
      * POST /api/events/:id/finalize
-     * Optional: { time_slot_index }
-     * Returns: { success: true, message, finalized_time_slot_index, finalized_time_slot, event: {...} }
+     * Finalize event with the winning time slot. Changes event status to "confirmed".
+     * 
+     * When to call:
+     * - Organizer clicks "Finalize Event" button
+     * - Voting period has ended
+     * - All attendees have voted (or timeout reached)
+     * 
+     * Behavior:
+     * - If time_slot_index provided: uses that (admin override)
+     * - If not provided: automatically selects slot with most votes
+     *   - Tie-break: picks lowest index deterministically
+     * - Sets event.status = "confirmed"
+     * - Sets event.finalized_time_slot = winning_index
+     * 
+     * Optional: { time_slot_index: 1 }  // Leave empty or omit for auto-selection
+     * Returns: {
+     *   success: true,
+     *   message: "Event finalized successfully",
+     *   finalized_time_slot_index: 0,
+     *   finalized_time_slot: "2025-11-14T10:00",
+     *   event: { ...full event object with finalized_time_slot, status: "confirmed" }
+     * }
+     * 
+     * Error scenarios:
+     * - No votes yet: error with context.reason = "no_votes"
+     * - Tie and no majority: error with context.reason = "no_majority"
+     * - Invalid time_slot_index: 400 error
+     * 
+     * Example (auto-select):
+     * const result = await api.voting.finalizeEvent("event123");
+     * if (result.success) {
+     *   console.log(`Event confirmed for ${result.finalized_time_slot}`);
+     * }
+     * 
+     * Example (manual override):
+     * const result = await api.voting.finalizeEvent("event123", 2);
+     * if (result.success) {
+     *   console.log(`Event confirmed (organizer override) for slot ${result.finalized_time_slot_index}`);
+     * }
      */
     finalizeEvent: async (eventId, timeSlotIndex = null) => {
       const body = {};
