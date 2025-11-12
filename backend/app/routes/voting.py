@@ -4,6 +4,11 @@ Handles voting operations for events
 """
 from flask import Blueprint, jsonify, request
 from app.models.event import Event
+from app.services.voting_service import (
+    calculate_tallies,
+    handle_vote_conflict,
+    determine_winner,
+)
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 import os
@@ -22,9 +27,9 @@ def get_db():
 @voting_bp.route('/<event_id>/vote', methods=['POST'])
 def submit_vote(event_id):
     """
-    Submit votes for time slots
+    Submit a vote for a single time slot
     POST /api/events/<event_id>/vote
-    Body: {user_email, time_slot_indexes: [0, 2]}
+    Body: {user_email, time_slot_index: 0}
     """
     try:
         data = request.get_json()
@@ -36,14 +41,14 @@ def submit_vote(event_id):
                 'error': 'Missing required field: user_email'
             }), 400
         
-        if 'time_slot_indexes' not in data or not isinstance(data.get('time_slot_indexes'), list):
+        if 'time_slot_index' not in data or not isinstance(data.get('time_slot_index'), int):
             return jsonify({
                 'success': False,
-                'error': 'Missing required field: time_slot_indexes (must be a list)'
+                'error': 'Missing required field: time_slot_index (must be an integer)'
             }), 400
         
         user_email = data.get('user_email')
-        time_slot_indexes = data.get('time_slot_indexes')
+        time_slot_index = data.get('time_slot_index')
         
         db = get_db()
         events_collection = db['Events']
@@ -56,20 +61,37 @@ def submit_vote(event_id):
                 'error': 'Event not found'
             }), 404
         
-        # Create Event object and add vote
-        event = Event.from_mongo(event_doc)
-        event.add_vote(user_email, time_slot_indexes)
+        # Validate time slot index
+        proposed_times = event_doc.get('proposed_times', []) or []
+        if time_slot_index < 0 or time_slot_index >= len(proposed_times):
+            return jsonify({
+                'success': False,
+                'error': 'Invalid time_slot_index'
+            }), 400
         
-        # Update event in database
+        # Handle conflict: merge incoming vote with existing votes (replace strategy)
+        existing_votes = event_doc.get('votes', {}) or {}
+        merged_votes = handle_vote_conflict(
+            existing_votes, 
+            {user_email: time_slot_index}, 
+            strategy="replace"
+        )
+        
+        # Persist merged votes to database
         events_collection.update_one(
             {'_id': ObjectId(event_id)},
-            {'$set': {'votes': event.votes}}
+            {'$set': {'votes': merged_votes}}
         )
+        
+        # Calculate tallies for response
+        num_slots = len(proposed_times)
+        tallies = calculate_tallies(merged_votes, num_slots=num_slots if num_slots > 0 else None)
         
         return jsonify({
             'success': True,
             'message': 'Vote submitted successfully',
-            'votes': event.votes
+            'votes': merged_votes,
+            'tallies': tallies
         }), 200
         
     except Exception as e:
@@ -97,29 +119,41 @@ def get_voting_results(event_id):
                 'error': 'Event not found'
             }), 404
         
-        # Create Event object to use aggregation methods
-        event = Event.from_mongo(event_doc)
+        # Extract votes and proposed times
+        votes = event_doc.get('votes', {}) or {}
+        proposed_times = event_doc.get('proposed_times', []) or []
+        num_slots = len(proposed_times)
         
-        # Get vote aggregation and most popular slots
-        vote_aggregation = event.get_vote_aggregation()
-        popular_slots = event.get_most_popular_time_slots()
+        # Calculate tallies using service
+        tallies = calculate_tallies(votes, num_slots=num_slots if num_slots > 0 else None)
+        
+        # Determine winner using service
+        winner, winner_context = determine_winner(
+            votes, 
+            num_slots=num_slots if num_slots > 0 else None
+        )
+        
+        # Build popular slots list (sorted by votes desc, index asc)
+        popular_slots = sorted(tallies.items(), key=lambda x: (-x[1], x[0]))
         
         return jsonify({
             'success': True,
             'event_id': event_id,
-            'votes_by_user': event.votes,
-            'votes_by_time_slot': vote_aggregation,
+            'votes_by_user': votes,
+            'votes_by_time_slot': tallies,
             'popular_time_slots': [
                 {
                     'time_slot_index': slot[0],
                     'vote_count': slot[1],
-                    'time_slot': event.proposed_times[slot[0]] if slot[0] < len(event.proposed_times) else None
+                    'time_slot': proposed_times[slot[0]] if slot[0] < len(proposed_times) else None
                 }
                 for slot in popular_slots
             ],
-            'total_votes': sum(vote_aggregation.values()),
-            'total_participants': len(event.votes),
-            'proposed_times': event.proposed_times
+            'winner': winner,
+            'winner_context': winner_context,
+            'total_votes': sum(tallies.values()),
+            'total_participants': len(votes),
+            'proposed_times': proposed_times
         }), 200
         
     except Exception as e:
@@ -153,7 +187,7 @@ def finalize_event(event_id):
         # Create Event object
         event = Event.from_mongo(event_doc)
         
-        # Determine winning time slot
+        # Determine winning time slot: explicit index or service-determined
         if 'time_slot_index' in data and data['time_slot_index'] is not None:
             winning_index = data['time_slot_index']
             # Validate the index
@@ -163,12 +197,18 @@ def finalize_event(event_id):
                     'error': 'Invalid time_slot_index'
                 }), 400
         else:
-            # Use the most voted time slot
-            winning_index = event.get_winning_time_slot()
+            # Use service to determine winner
+            votes = event_doc.get('votes', {}) or {}
+            num_slots = len(event.proposed_times)
+            winning_index, ctx = determine_winner(
+                votes, 
+                num_slots=num_slots if num_slots > 0 else None
+            )
             if winning_index is None:
                 return jsonify({
                     'success': False,
-                    'error': 'No votes yet. Cannot finalize without votes or explicit time_slot_index.'
+                    'error': 'No clear winning time slot. Please provide time_slot_index or ensure votes exist.',
+                    'context': ctx
                 }), 400
         
         # Update event
