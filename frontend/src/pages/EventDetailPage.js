@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Card, Badge, Button, Spinner, Alert, Form } from 'react-bootstrap';
 import api from '../services/api';
+import Polls from './Polls';
 
 function EventDetailPage() {
   const { eventId } = useParams();
@@ -60,9 +61,7 @@ function EventDetailPage() {
     return (
       <Container className="mt-5">
         <Alert variant="danger">{error}</Alert>
-        <Button variant="secondary" onClick={() => navigate('/events')}>
-          Back to Events
-        </Button>
+        <Button variant="secondary" onClick={() => navigate('/events')}>Back to Events</Button>
       </Container>
     );
   }
@@ -71,9 +70,7 @@ function EventDetailPage() {
     return (
       <Container className="mt-5">
         <Alert variant="warning">Event not found</Alert>
-        <Button variant="secondary" onClick={() => navigate('/events')}>
-          Back to Events
-        </Button>
+        <Button variant="secondary" onClick={() => navigate('/events')}>Back to Events</Button>
       </Container>
     );
   }
@@ -84,7 +81,8 @@ function EventDetailPage() {
         ← Back to Events
       </Button>
 
-      <Card className="shadow-sm">
+      {/* Main Event Details Card */}
+      <Card className="shadow-sm mb-4">
         <Card.Body>
           <div className="d-flex justify-content-between align-items-start mb-4">
             <div>
@@ -108,12 +106,10 @@ function EventDetailPage() {
               <p className="text-muted mb-4">{event.organizer_email}</p>
 
               <h5>Proposed Times</h5>
-              {event.proposed_times && event.proposed_times.length > 0 ? (
+              {event.proposed_times?.length > 0 ? (
                 <ul className="list-unstyled">
                   {event.proposed_times.map((time, idx) => (
-                    <li key={idx} className="mb-2">
-                      {formatDate(time)}
-                    </li>
+                    <li key={idx} className="mb-2">{formatDate(time)}</li>
                   ))}
                 </ul>
               ) : (
@@ -127,10 +123,7 @@ function EventDetailPage() {
                   e.preventDefault();
                   if (!dateMMDD && !timeHHMM && !suggestedLocation) return;
                   const combined = dateMMDD && timeHHMM ? `${dateMMDD} ${timeHHMM}` : (dateMMDD || timeHHMM || null);
-                  const newSuggestion = {
-                    time: combined,
-                    location: suggestedLocation || null
-                  };
+                  const newSuggestion = { time: combined, location: suggestedLocation || null };
                   setSuggestions([...suggestions, newSuggestion]);
                   setDateMMDD('');
                   setTimeHHMM('');
@@ -171,9 +164,7 @@ function EventDetailPage() {
                     </Form.Group>
                   </Col>
                 </Row>
-                <Button type="submit" variant="primary" className="mt-3">
-                  Add Suggestion
-                </Button>
+                <Button type="submit" variant="primary" className="mt-3">Add Suggestion</Button>
               </Form>
 
               {suggestions.length > 0 && (
@@ -195,12 +186,10 @@ function EventDetailPage() {
               <Card className="mb-4">
                 <Card.Body>
                   <h5>Attendees ({event.attendees?.length || 0})</h5>
-                  {event.attendees && event.attendees.length > 0 ? (
+                  {event.attendees?.length > 0 ? (
                     <ul className="list-unstyled">
                       {event.attendees.map((attendee, idx) => (
-                        <li key={idx} className="mb-2">
-                          {attendee}
-                        </li>
+                        <li key={idx} className="mb-2">{attendee}</li>
                       ))}
                     </ul>
                   ) : (
@@ -212,16 +201,24 @@ function EventDetailPage() {
               <Card>
                 <Card.Body>
                   <h5 className="mb-3">Event Details</h5>
-                  <p className="mb-2">
-                    <strong>Created:</strong> {formatDate(event.created_at)}
-                  </p>
-                  <p className="mb-0">
-                    <strong>Status:</strong> {event.status}
-                  </p>
+                  <p className="mb-2"><strong>Created:</strong> {formatDate(event.created_at)}</p>
+                  <p className="mb-0"><strong>Status:</strong> {event.status}</p>
                 </Card.Body>
               </Card>
             </Col>
           </Row>
+        </Card.Body>
+      </Card>
+
+      {/* Polls Section */}
+      <Card className="shadow-sm">
+        <Card.Body>
+          <h5>Polls</h5>
+          {event.polls?.length > 0 ? (
+            <Polls eventId={event._id} />
+          ) : (
+            <p className="text-muted">No polls available for this event.</p>
+          )}
         </Card.Body>
       </Card>
     </Container>

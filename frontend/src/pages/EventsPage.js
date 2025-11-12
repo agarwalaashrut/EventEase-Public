@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Button, Container, Row, Col, Badge, Spinner, Alert} from 'react-bootstrap';
+import { Card, Button, Container, Row, Col, Badge, Spinner, Alert } from 'react-bootstrap';
 import api from '../services/api';
-import PollsPage from './Polls';
 
 function EventsPage() {
   const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showPolls, setShowPolls] = useState(false);
-  
 
   useEffect(() => {
     fetchEvents();
@@ -42,20 +39,10 @@ function EventsPage() {
       day: 'numeric',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
 
-  if (showPolls) {
-    return (
-      <Container className="py-4">
-        <Button variant="primary" onClick={() => setShowPolls(false)} className="mb-3">
-          Back to Events
-        </Button>
-        <PollsPage />
-      </Container>
-    );
-  }
   if (loading) {
     return (
       <Container className="text-center mt-5">
@@ -71,7 +58,6 @@ function EventsPage() {
     <Container className="events-page py-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h1>My Events</h1>
-        <Button variant="primary" size="lg" onClick={() => setShowPolls(true)}>
         <Button variant="primary" size="lg" onClick={() => navigate('/events/create')}>
           + Create New Event
         </Button>
@@ -111,25 +97,23 @@ function EventsPage() {
                     </Badge>
                   </div>
 
-                  <Card.Text className="text-muted small mb-3">
-                    {event.description}
-                  </Card.Text>
+                  <Card.Text className="text-muted small mb-3">{event.description}</Card.Text>
 
                   <div className="mb-2">
-                    <strong> Location:</strong> {event.location}
+                    <strong>Location:</strong> {event.location}
                   </div>
 
                   <div className="mb-2">
-                    <strong> Organizer:</strong> {event.organizer}
+                    <strong>Organizer:</strong> {event.organizer}
                   </div>
 
                   <div className="mb-3">
-                    <strong> Attendees:</strong> {event.attendees?.length || 0}
+                    <strong>Attendees:</strong> {event.attendees?.length || 0}
                   </div>
 
                   {event.proposed_times && event.proposed_times.length > 0 && (
                     <div className="mb-3">
-                      <strong> Proposed Times:</strong>
+                      <strong>Proposed Times:</strong>
                       <ul className="small mt-1 ps-3">
                         {event.proposed_times.slice(0, 2).map((time, idx) => (
                           <li key={idx}>{formatDate(time.start)}</li>
