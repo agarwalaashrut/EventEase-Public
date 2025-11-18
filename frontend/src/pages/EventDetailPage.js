@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Row, Col, Card, Badge, Button, Spinner, Alert, Form } from 'react-bootstrap';
 import api from '../services/api';
-import Polls from './Polls';
+import PollPage from './Polls';
+import InvitePage from './InvitePage';
 
 function EventDetailPage() {
   const { eventId } = useParams();
@@ -81,7 +82,6 @@ function EventDetailPage() {
         ← Back to Events
       </Button>
 
-      {/* Main Event Details Card */}
       <Card className="shadow-sm mb-4">
         <Card.Body>
           <div className="d-flex justify-content-between align-items-start mb-4">
@@ -94,6 +94,7 @@ function EventDetailPage() {
           </div>
 
           <Row>
+            {/* Left Column: Event Description, Suggest Form, Suggestions */}
             <Col md={8}>
               <h5>Description</h5>
               <p className="mb-4">{event.description}</p>
@@ -154,7 +155,7 @@ function EventDetailPage() {
                   </Col>
                   <Col md={4}>
                     <Form.Group controlId="suggestedLocation">
-                      <Form.Label>Suggested Location</Form.Label>
+                      <Form.Label>Location</Form.Label>
                       <Form.Control
                         type="text"
                         placeholder="Enter a location"
@@ -168,8 +169,8 @@ function EventDetailPage() {
               </Form>
 
               {suggestions.length > 0 && (
-                <>
-                  <h6 className="mt-4">Your Suggestions</h6>
+                <div className="mt-3">
+                  <h6>Your Suggestions</h6>
                   <ul className="list-unstyled">
                     {suggestions.map((s, idx) => (
                       <li key={idx} className="mb-2">
@@ -178,10 +179,11 @@ function EventDetailPage() {
                       </li>
                     ))}
                   </ul>
-                </>
+                </div>
               )}
             </Col>
 
+            {/* Right Column: Attendees + Event Details + Invite */}
             <Col md={4}>
               <Card className="mb-4">
                 <Card.Body>
@@ -198,27 +200,26 @@ function EventDetailPage() {
                 </Card.Body>
               </Card>
 
-              <Card>
+              <Card className="mb-4">
                 <Card.Body>
-                  <h5 className="mb-3">Event Details</h5>
+                  <h5>Event Details</h5>
                   <p className="mb-2"><strong>Created:</strong> {formatDate(event.created_at)}</p>
                   <p className="mb-0"><strong>Status:</strong> {event.status}</p>
                 </Card.Body>
               </Card>
+
+              {/* Invite Card under Attendees & Event Details */}
+                  <InvitePage eventId={event.id || event._id} />
             </Col>
           </Row>
         </Card.Body>
       </Card>
 
       {/* Polls Section */}
-      <Card className="shadow-sm">
+      <Card className="shadow-sm mt-4">
         <Card.Body>
           <h5>Polls</h5>
-          {event.polls?.length > 0 ? (
-            <Polls eventId={event._id} />
-          ) : (
-            <p className="text-muted">No polls available for this event.</p>
-          )}
+          <PollPage />
         </Card.Body>
       </Card>
     </Container>

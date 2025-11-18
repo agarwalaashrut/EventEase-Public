@@ -31,12 +31,17 @@
 }
 
 .addpoll-button {
-  border: "1px solid gray";
-  margin: "10px 0";
-  padding: "10px";
-  border-radius: "8px";
-  width: "300px";
-  flex-shrink: 0;
+  border-radius: 6px;        
+  padding: 4px 9px;       
+  font-size: 16px;
+  background-color: #0d6efd;
+  color: #fff;
+  border: 1px solid #fdfffe;
+}
+
+.addpoll-button:hover {
+    background-color: #0e59c9;
+
 }
 
 .poll-card {
@@ -50,3 +55,4 @@
   border-color: #7a7b7b;
   box-sizing: border-box;
 }
+

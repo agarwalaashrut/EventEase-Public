@@ -35,7 +35,7 @@ install: install-backend install-frontend
 
 install-backend:
 	@echo "Installing backend dependencies..."
-	cd backend && python -m venv venv && \
+	cd backend && $(PYTHON) -m venv venv && \
 	if [ -f venv/bin/python ]; then \
 		venv/bin/python -m pip install -r requirements.txt; \
 	else \
