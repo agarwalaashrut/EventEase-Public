@@ -21,7 +21,7 @@ function EventsPage() {
       setLoading(true);
       setError(null);
       const response = await api.events.getAll();
-      
+
       if (response.success) {
         setEvents(response.events || []);
       } else {
@@ -37,9 +37,9 @@ function EventsPage() {
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -71,7 +71,7 @@ function EventsPage() {
     <Container className="events-page py-4">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h1>My Events</h1>
-        <Button variant="primary" size="lg" onClick={() => setShowPolls(true)}>
+        <Button variant="primary" size="lg" onClick={() => navigate('/events/create')}>
           + Create New Event
         </Button>
       </div>
@@ -89,7 +89,7 @@ function EventsPage() {
             <Card.Text className="text-muted mb-4">
               Create your first event to get started!
             </Card.Text>
-            <Button variant="primary" size="lg">
+            <Button variant="primary" size="lg" onClick={() => navigate('/events/create')}>
               Create New Event
             </Button>
           </Card.Body>
@@ -102,38 +102,36 @@ function EventsPage() {
                 <Card.Body>
                   <div className="d-flex justify-content-between align-items-start mb-2">
                     <Card.Title>{event.title}</Card.Title>
-                    <Badge 
+                    <Badge
                       bg={event.status === 'confirmed' ? 'success' : 'warning'}
                       className="ms-2"
                     >
                       {event.status}
                     </Badge>
                   </div>
-                  
+
                   <Card.Text className="text-muted small mb-3">
                     {event.description}
                   </Card.Text>
 
                   <div className="mb-2">
-                    <strong> Location:</strong> {event.location}
+                    <strong>Location:</strong> {event.location}
                   </div>
 
                   <div className="mb-2">
-                    <strong> Organizer:</strong> {event.organizer}
+                    <strong>Organizer:</strong> {event.organizer}
                   </div>
 
                   <div className="mb-3">
-                    <strong> Attendees:</strong> {event.attendees?.length || 0}
+                    <strong>Attendees:</strong> {event.attendees?.length || 0}
                   </div>
 
                   {event.proposed_times && event.proposed_times.length > 0 && (
                     <div className="mb-3">
-                      <strong> Proposed Times:</strong>
+                      <strong>Proposed Times:</strong>
                       <ul className="small mt-1 ps-3">
                         {event.proposed_times.slice(0, 2).map((time, idx) => (
-                          <li key={idx}>
-                            {formatDate(time.start)}
-                          </li>
+                          <li key={idx}>{formatDate(time.start)}</li>
                         ))}
                         {event.proposed_times.length > 2 && (
                           <li className="text-muted">
@@ -145,8 +143,8 @@ function EventsPage() {
                   )}
 
                   <div className="d-grid gap-2">
-                    <Button 
-                      variant="outline-primary" 
+                    <Button
+                      variant="outline-primary"
                       size="sm"
                       onClick={() => navigate(`/events/${event._id}`)}
                     >
