@@ -28,8 +28,9 @@ class TestingConfig(Config):
     """Testing configuration."""
     DEBUG = False
     TESTING = True
-    MONGO_URI = os.getenv('MONGO_URI')
-    DB_NAME = os.getenv('TEST_DB_NAME')
+    # Use the same database as development for now, but could use a separate test DB
+    # MONGO_URI = os.getenv('MONGO_URI')
+    # DB_NAME = os.getenv('TEST_DB_NAME', 'Test_Events')
 
 
 class ProductionConfig(Config):

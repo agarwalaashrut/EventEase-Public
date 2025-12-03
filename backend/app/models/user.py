@@ -21,10 +21,13 @@ class User:
         self.created_at = data.get('created_at', datetime.utcnow())
         self.last_login = data.get('last_login')
         self.invitations = data.get('invitations', [])  # List of event IDs the user is invited to
+        # Google Calendar OAuth
+        self.google_refresh_token = data.get('google_refresh_token')  # Refresh token for calendar API
+        self.google_calendar_id = data.get('google_calendar_id')  # User's primary calendar ID (usually email)
 
     
     def to_dict(self) -> dict:
-        """Convert User to dictionary for JSON serialization (excludes password_hash)"""
+        """Convert User to dictionary for JSON serialization (excludes password_hash and refresh_token)"""
         return {
             '_id': str(self._id) if self._id else None,
             'email': self.email,
@@ -32,7 +35,8 @@ class User:
             'oauth_provider': self.oauth_provider,
             'created_at': self.created_at.isoformat() if isinstance(self.created_at, datetime) else self.created_at,
             'last_login': self.last_login.isoformat() if isinstance(self.last_login, datetime) else self.last_login,
-            'invitations': self.invitations
+            'invitations': self.invitations,
+            'google_calendar_connected': bool(self.google_refresh_token)
         }
     
     def to_mongo(self) -> dict:
@@ -45,7 +49,9 @@ class User:
             'oauth_id': self.oauth_id,
             'created_at': self.created_at,
             'last_login': self.last_login,
-            'invitations': self.invitations
+            'invitations': self.invitations,
+            'google_refresh_token': self.google_refresh_token,
+            'google_calendar_id': self.google_calendar_id
         }
         if self._id:
             doc['_id'] = self._id

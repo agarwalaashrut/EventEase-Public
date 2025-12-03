@@ -17,7 +17,7 @@ function HomePage() {
               <Card.Text>
                 Easily create and manage your events with our intuitive interface.
               </Card.Text>
-              <Button variant="primary">Get Started</Button>
+              <Button variant="primary">Get Started </Button>
             </Card.Body>
           </Card>
         </Col>

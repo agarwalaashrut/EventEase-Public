@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Button, Container, Row, Col, Badge, Spinner, Alert } from 'react-bootstrap';
+import { Card, Button, Container, Row, Col, Badge, Spinner, Alert} from 'react-bootstrap';
 import api from '../services/api';
+import PollsPage from './Polls';
 
 function EventsPage() {
   const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showPolls, setShowPolls] = useState(false);
+  
 
   useEffect(() => {
     fetchEvents();
@@ -43,6 +46,16 @@ function EventsPage() {
     });
   };
 
+  if (showPolls) {
+    return (
+      <Container className="py-4">
+        <Button variant="primary" onClick={() => setShowPolls(false)} className="mb-3">
+          Back to Events
+        </Button>
+        <PollsPage />
+      </Container>
+    );
+  }
   if (loading) {
     return (
       <Container className="text-center mt-5">
