@@ -101,10 +101,105 @@ export const api = {
       });
       return response.json();
     },
+  },
 
-    // Future implementation:
-    // OAuth endpoint available on backend at POST /api/users/oauth/login
-    // Required: { provider, oauth_id, email, name }
+  // Authentication / OAuth endpoints
+  auth: {
+    /**
+     * GET /api/auth/google/login
+     * Initiates Google OAuth flow for Calendar integration
+     * 
+     * When to call:
+     * - User clicks "Connect Google Calendar" button
+     * - After user approves calendar access, backend exchanges code for tokens
+     * 
+     * Query params (optional):
+     * - redirect_url: Frontend URL to return to after auth (default: http://localhost:3000)
+     * 
+     * Returns: {
+     *   success: true,
+     *   auth_url: "https://accounts.google.com/o/oauth2/auth?...",
+     *   state: "uuid-token"
+     * }
+     * 
+     * Example:
+     * const result = await api.auth.getGoogleLoginUrl();
+     * if (result.success) {
+     *   window.location.href = result.auth_url;  // Redirect to Google
+     * }
+     */
+    getGoogleLoginUrl: async (redirectUrl = null) => {
+      let url = `${API_BASE_URL}/api/auth/google/login`;
+      if (redirectUrl) {
+        url += `?redirect_url=${encodeURIComponent(redirectUrl)}`;
+      }
+      const response = await fetch(url);
+      return response.json();
+    },
+
+    /**
+     * GET /api/auth/calendar/status?email=user@example.com
+     * Check if user has connected their Google Calendar
+     * 
+     * When to call:
+     * - On user profile/settings page
+     * - After successful OAuth callback
+     * - To show "Connect Calendar" vs "Disconnect Calendar" button
+     * 
+     * Required query param:
+     * - email: User's email address
+     * 
+     * Returns: {
+     *   success: true,
+     *   calendar_connected: true,
+     *   calendar_id: "user@example.com",
+     *   user_id: "mongodb_id"
+     * }
+     * 
+     * Example:
+     * const status = await api.auth.getCalendarStatus("alice@company.com");
+     * if (status.calendar_connected) {
+     *   console.log("Calendar already connected!");
+     * } else {
+     *   console.log("User needs to connect calendar");
+     * }
+     */
+    getCalendarStatus: async (email) => {
+      const response = await fetch(
+        `${API_BASE_URL}/api/auth/calendar/status?email=${encodeURIComponent(email)}`
+      );
+      return response.json();
+    },
+
+    /**
+     * POST /api/auth/calendar/disconnect
+     * Disconnect Google Calendar from user account
+     * 
+     * When to call:
+     * - User clicks "Disconnect Calendar" button in settings
+     * - User wants to revoke calendar access
+     * 
+     * Required: { email: "user@example.com" }
+     * 
+     * Returns: {
+     *   success: true,
+     *   message: "Calendar disconnected successfully"
+     * }
+     * 
+     * Example:
+     * const result = await api.auth.disconnectCalendar("alice@company.com");
+     * if (result.success) {
+     *   console.log("Calendar access revoked");
+     * }
+     */
+    disconnectCalendar: async (email) => {
+      const response = await fetch(`${API_BASE_URL}/api/auth/calendar/disconnect`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      return response.json();
+    },
   },
 
   // Invitations endpoints
@@ -214,6 +309,7 @@ export const api = {
     /**
      * POST /api/events/:id/finalize
      * Finalize event with the winning time slot. Changes event status to "confirmed".
+     * If organizer has Google Calendar connected, automatically creates calendar event.
      * 
      * When to call:
      * - Organizer clicks "Finalize Event" button
@@ -226,6 +322,7 @@ export const api = {
      *   - Tie-break: picks lowest index deterministically
      * - Sets event.status = "confirmed"
      * - Sets event.finalized_time_slot = winning_index
+     * - If organizer has Google Calendar: creates calendar event and invites attendees
      * 
      * Optional: { time_slot_index: 1 }  // Leave empty or omit for auto-selection
      * Returns: {
@@ -233,24 +330,32 @@ export const api = {
      *   message: "Event finalized successfully",
      *   finalized_time_slot_index: 0,
      *   finalized_time_slot: "2025-11-14T10:00",
-     *   event: { ...full event object with finalized_time_slot, status: "confirmed" }
+     *   event: { ...full event object with finalized_time_slot, status: "confirmed" },
+     *   calendar: {
+     *     calendar_event_created: true,
+     *     calendar_event_id: "google_event_id_xyz",
+     *     calendar_error: null
+     *   }
      * }
+     * 
+     * Calendar response details:
+     * - calendar_event_created: Boolean indicating if Google Calendar event was created
+     * - calendar_event_id: Google Calendar event ID (if successfully created)
+     * - calendar_error: Error message if calendar sync failed (but event still finalized)
      * 
      * Error scenarios:
      * - No votes yet: error with context.reason = "no_votes"
      * - Tie and no majority: error with context.reason = "no_majority"
      * - Invalid time_slot_index: 400 error
+     * - Event still succeeds even if calendar creation fails
      * 
-     * Example (auto-select):
+     * Example (auto-select with calendar):
      * const result = await api.voting.finalizeEvent("event123");
      * if (result.success) {
      *   console.log(`Event confirmed for ${result.finalized_time_slot}`);
-     * }
-     * 
-     * Example (manual override):
-     * const result = await api.voting.finalizeEvent("event123", 2);
-     * if (result.success) {
-     *   console.log(`Event confirmed (organizer override) for slot ${result.finalized_time_slot_index}`);
+     *   if (result.calendar.calendar_event_created) {
+     *     console.log(`Added to organizer's calendar: ${result.calendar.calendar_event_id}`);
+     *   }
      * }
      */
     finalizeEvent: async (eventId, timeSlotIndex = null) => {

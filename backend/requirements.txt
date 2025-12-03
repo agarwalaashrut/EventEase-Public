@@ -10,3 +10,6 @@ mongomock==4.1.2
 flake8==7.0.0
 dnspython==2.4.2
 flask-mail==0.9.1
+google-auth-oauthlib==1.2.0
+google-auth-httplib2==0.2.0
+google-api-python-client==2.100.0

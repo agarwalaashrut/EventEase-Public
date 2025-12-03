@@ -16,3 +16,4 @@ from .events import events_bp
 from .users import users_bp
 from .invitations import invitations_bp
 from .voting import voting_bp
+from .auth import auth_bp
