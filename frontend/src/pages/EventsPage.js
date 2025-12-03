@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Button, Container, Row, Col, Badge, Spinner, Alert} from 'react-bootstrap';
+import { Card, Button, Container, Row, Col, Badge, Spinner, Alert } from 'react-bootstrap';
 import api from '../services/api';
 import PollsPage from './Polls';
 
@@ -42,7 +42,7 @@ function EventsPage() {
       day: 'numeric',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
 
