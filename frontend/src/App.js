@@ -2,7 +2,8 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Container } from 'react-bootstrap';
 import NavigationBar from './components/NavigationBar';
-import { HomePage, EventsPage, EventDetailPage, CreateEventPage } from './pages'; // ✅ add CreateEventPage
+import { HomePage, EventsPage, EventDetailPage, CreateEventPage } from './pages';
+import CalendarSyncPage from './pages/CalendarSyncPage';
 import './App.css';
 
 function App() {
@@ -14,8 +15,9 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/events" element={<EventsPage />} />
-            <Route path="/events/create" element={<CreateEventPage />} /> {/* ✅ add this line above :eventId */}
+            <Route path="/events/create" element={<CreateEventPage />} />
             <Route path="/events/:eventId" element={<EventDetailPage />} />
+            <Route path="/sync" element={<CalendarSyncPage />} />
           </Routes>
         </Container>
       </div>
