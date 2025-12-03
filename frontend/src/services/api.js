@@ -371,6 +371,84 @@ export const api = {
       return response.json();
     },
   },
+
+  // Calendar endpoints
+  calendar: {
+    /**
+     * GET /api/auth/google/login
+     * Initiate Google Calendar connection
+     * 
+     * When to call:
+     * - User clicks "Connect Google Calendar" button
+     * - After user approves, backend exchanges code for tokens
+     * 
+     * Returns: {
+     *   success: true,
+     *   auth_url: "https://accounts.google.com/o/oauth2/auth?..."
+     * }
+     */
+    connect: async (redirectUrl = null) => {
+      return api.auth.getGoogleLoginUrl(redirectUrl);
+    },
+
+    /**
+     * GET /api/auth/calendar/status?email=user@example.com
+     * Check if user has connected their Google Calendar
+     * 
+     * When to call:
+     * - On page load to show current connection status
+     * - To determine if user needs to connect calendar
+     * 
+     * Returns: {
+     *   success: true,
+     *   calendar_connected: true,
+     *   calendar_id: "user@example.com",
+     *   user_id: "mongodb_id"
+     * }
+     */
+    status: async (email) => {
+      return api.auth.getCalendarStatus(email);
+    },
+
+    /**
+     * POST /api/auth/calendar/disconnect
+     * Disconnect user's Google Calendar
+     * 
+     * When to call:
+     * - User clicks "Disconnect Calendar" button
+     * 
+     * Returns: {
+     *   success: true,
+     *   message: "Calendar disconnected successfully"
+     * }
+     */
+    disconnect: async (email) => {
+      return api.auth.disconnectCalendar(email);
+    },
+
+    /**
+     * GET /api/calendar/conflicts
+     * Get detected conflicts between calendar and events
+     * 
+     * When to call:
+     * - After successful calendar connection
+     * - Periodically to refresh conflict list
+     * 
+     * Returns: {
+     *   success: true,
+     *   conflicts: [
+     *     { title: "Event name", time: "2025-11-14T10:00" },
+     *     ...
+     *   ]
+     * }
+     */
+    getConflicts: async (email) => {
+      const response = await fetch(
+        `${API_BASE_URL}/api/calendar/conflicts?email=${encodeURIComponent(email)}`
+      );
+      return response.json();
+    },
+  },
 };
 
 export default api;
