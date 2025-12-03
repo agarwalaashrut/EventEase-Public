@@ -9,6 +9,7 @@ from app.services.voting_service import (
     handle_vote_conflict,
     determine_winner,
 )
+from app.services.calendar_service import get_calendar_service
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 import os
@@ -167,6 +168,7 @@ def get_voting_results(event_id):
 def finalize_event(event_id):
     """
     Finalize event with the winning time slot
+    If organizer has Google Calendar connected, creates event on their calendar
     POST /api/events/<event_id>/finalize
     Body: {time_slot_index} (optional - if not provided, uses most voted)
     """
@@ -175,6 +177,7 @@ def finalize_event(event_id):
         
         db = get_db()
         events_collection = db['Events']
+        users_collection = db['Users']
         
         # Find event
         event_doc = events_collection.find_one({'_id': ObjectId(event_id)})
@@ -214,6 +217,7 @@ def finalize_event(event_id):
         # Update event
         event.finalized_time_slot = winning_index
         event.status = 'confirmed'
+        finalized_time = event.proposed_times[winning_index]
         
         # Update in database
         events_collection.update_one(
@@ -226,12 +230,54 @@ def finalize_event(event_id):
             }
         )
         
+        # Attempt to create calendar event if organizer has Google Calendar connected
+        calendar_response = {
+            'calendar_event_created': False,
+            'calendar_event_id': None,
+            'calendar_error': None
+        }
+        
+        try:
+            organizer_doc = users_collection.find_one({'email': event.organizer_email})
+            if organizer_doc and organizer_doc.get('google_refresh_token'):
+                calendar_service = get_calendar_service()
+                
+                # Prepare attendee emails
+                attendee_emails = event.attendees if event.attendees else []
+                if event.organizer_email not in attendee_emails:
+                    attendee_emails = [event.organizer_email] + attendee_emails
+                
+                # Create calendar event
+                success, cal_event_id, error = calendar_service.create_calendar_event(
+                    refresh_token=organizer_doc['google_refresh_token'],
+                    event_title=event.title,
+                    event_time=finalized_time,
+                    event_description=event.description or '',
+                    organizer_email=event.organizer_email,
+                    attendee_emails=attendee_emails
+                )
+                
+                if success:
+                    calendar_response['calendar_event_created'] = True
+                    calendar_response['calendar_event_id'] = cal_event_id
+                    
+                    # Store calendar event ID in event document
+                    events_collection.update_one(
+                        {'_id': ObjectId(event_id)},
+                        {'$set': {'google_calendar_event_id': cal_event_id}}
+                    )
+                else:
+                    calendar_response['calendar_error'] = error
+        except Exception as cal_error:
+            calendar_response['calendar_error'] = f"Calendar sync error: {str(cal_error)}"
+        
         return jsonify({
             'success': True,
             'message': 'Event finalized successfully',
             'finalized_time_slot_index': winning_index,
-            'finalized_time_slot': event.proposed_times[winning_index],
-            'event': event.to_dict()
+            'finalized_time_slot': finalized_time,
+            'event': event.to_dict(),
+            'calendar': calendar_response
         }), 200
         
     except Exception as e:

@@ -1,43 +1,61 @@
+//setup
+//useState enables functional components to have their own memory for data
 import React, { useState } from "react";
-import { Form, Button, Card, ListGroup, Row, Col } from "react-bootstrap";
 
 function PollPage() {
-  const [polls, setPolls] = useState([]);
-  const [nextPollId, setNextPollId] = useState(1);
-  const [nextOptionId, setNextOptionId] = useState(1);
+const [polls, setPolls] = useState([]);
+const [nextPollId, setNextPollId] = useState(1);
+const [nextOptionId, setNextOptionId] = useState(1);
 
-  const addPoll = () => {
-    const newPoll = { id: nextPollId, title: "", options: [], newOptionName: "" };
-    setPolls([...polls, newPoll]);
+
+//add Poll Function
+
+const addPoll = () => {
+    setPolls([...polls,
+      { id: nextPollId, title: "", options: [], newOptionName: "" },
+    ]);
     setNextPollId(nextPollId + 1);
   };
 
-  const updatePollTitle = (pollId, newTitle) => {
-    setPolls(
-      polls.map((poll) => (poll.id === pollId ? { ...poll, title: newTitle } : poll))
+  //Update Poll titlee
+ const updatePollTitle = (pollId, newTitle) => {
+    setPolls(polls.map((poll) => poll.id === pollId ? { ...poll, title: newTitle } : poll
+      )
     );
   };
 
-  const updateNewOptionName = (pollId, name) => {
-    setPolls(
-      polls.map((poll) => (poll.id === pollId ? { ...poll, newOptionName: name } : poll))
+//Typing in the option input 
+//LOOK
+ const namePoll = (pollId, name) => {
+    setPolls(polls.map((poll) =>
+        poll.id === pollId ? { ...poll, newOptionName: name } : poll
+      )
     );
   };
-
-  const addOption = (pollId) => {
+//react cant handle updating ui if thigns are moved by place
+const addOption = (pollId) => {
     setPolls(
       polls.map((poll) => {
         if (poll.id === pollId && poll.newOptionName.trim() !== "") {
-          const newOption = { id: nextOptionId, name: poll.newOptionName, votes: 0 };
-          setNextOptionId(nextOptionId + 1);
-          return { ...poll, options: [...poll.options, newOption], newOptionName: "" };
+          return {
+            ...poll,
+            options: [
+              ...poll.options,
+              { id: nextOptionId, name: poll.newOptionName, votes: 0 },
+            ],
+            newOptionName: "",
+          };
         }
         return poll;
       })
     );
+    setNextOptionId(nextOptionId + 1);
   };
 
-  const vote = (pollId, optionId) => {
+
+
+//Voting
+const vote = (pollId, optionId) => {
     setPolls(
       polls.map((poll) => {
         if (poll.id === pollId) {
@@ -53,77 +71,65 @@ function PollPage() {
     );
   };
 
-  return (
-    <div className="poll-page" style={{ padding: "20px" }}>
-      <p className="lead mb-4">Let members cast votes on event details.</p>
+// All of the Styling
 
-      <Button className="addpoll-button mb-3" onClick={addPoll}>
-        + Add Poll
-      </Button>
+return (
+    <div style={{ padding: "20px" }}>
+      <h1>Polls </h1>
+      <p className="lead mb-4">
+        Let members cast votes on event details.       </p>
+      <button onClick={addPoll} className="addpoll-button">+ Add Poll</button>
 
-      {polls.length === 0 && <p>No polls available yet.</p>}
+      <div style={{display: "flex", flexWrap: "wrap", gap: "20px", marginTop: "20px"}} >
+      {polls.map((poll) => (
+        <div
+          key={poll.id}
+          className="poll-card"
+        >
+          {/* Poll title */}
+          <input
+            value={poll.title}
+            onChange={(element) => updatePollTitle(poll.id, element.target.value)}
+            placeholder="Insert Poll Title"
+            style={{ fontSize: "1.2em", display: "block", width: "100%", marginBottom: "5px" }}
+          />
 
-      <Row className="g-3">
-        {polls.map((poll) => (
-          <Col key={poll.id} xs={12} sm={6} md={4} lg={3}>
-            <Card className="shadow-sm">
-              <Card.Body>
-                {/* Poll Title */}
-                <Form.Group className="mb-3" controlId={`pollTitle${poll.id}`}>
-                  <Form.Control
-                    type="text"
-                    placeholder="Insert Poll Title"
-                    value={poll.title}
-                    onChange={(e) => updatePollTitle(poll.id, e.target.value)}
-                  />
-                </Form.Group>
+          {/* List of options */}
+          <ul style={{ listStyle: "none", paddingLeft: 0}}>
+            {poll.options.map((option) => (
+              <li key={option.id} 
+              style={{ display: "flex", marginBottom: "5px", justifyContent: "space-between", alignItems: "center" }}>
+                {/* Option name */}
+              <span>{option.name}</span>
 
-                {/* Poll Options */}
-                <ListGroup className="mb-3">
-                  {poll.options.map((option) => (
-                    <ListGroup.Item
-                      key={option.id}
-                      className="d-flex justify-content-between align-items-center"
-                    >
-                      <span>{option.name}</span>
-                      <div className="d-flex align-items-center gap-2">
-                        <span>{option.votes} Votes</span>
-                        <Button size="sm" onClick={() => vote(poll.id, option.id)}>
-                          Vote
-                        </Button>
-                      </div>
-                    </ListGroup.Item>
-                  ))}
-                </ListGroup>
-
-                {/* Add New Option */}
-                <Form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    addOption(poll.id);
-                  }}
-                  className="d-flex"
-                >
-                  <Form.Group className="flex-grow-1 me-2" controlId={`pollOption${poll.id}`}>
-                    <Form.Control
-                      type="text"
-                      placeholder="Enter your option"
-                      value={poll.newOptionName || ""}
-                      onChange={(e) => updateNewOptionName(poll.id, e.target.value)}
-                      required
-                    />
-                  </Form.Group>
-                  <Button type="submit" className="option-button">
-                    +
-                  </Button>
-                </Form>
-              </Card.Body>
-            </Card>
-          </Col>
-        ))}
-      </Row>
+              {/* Right-aligned votes + button */}
+              <span style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                <span>{option.votes} Votes</span>
+                <button onClick={() => vote(poll.id, option.id)}>Vote</button>
+              </span>
+              </li>
+            ))}
+          </ul>
+          
+          {/* Input to add a new option */}
+          <input
+            type="text"
+            placeholder="Insert New Option"
+            value={poll.newOptionName || ""}
+            onChange={(e) => namePoll(poll.id, e.target.value)}
+            style={{ marginRight: "5px" }}
+           />
+          <button onClick={() => addOption(poll.id)}
+            className="option-button"
+            >
+            + 
+          </button>
+        </div>
+      ))}
+    </div>
     </div>
   );
+
 }
 
 export default PollPage;
