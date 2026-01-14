@@ -66,7 +66,7 @@ function CalendarSyncPage() {
       setUserEmail(emailInput);
       
       // Get the OAuth URL from backend
-      const res = await api.calendar.connect(window.location.origin + '/sync');
+      const res = await api.calendar.connect();
       if (res.success && res.auth_url) {
         // Redirect to Google OAuth
         window.location.href = res.auth_url;

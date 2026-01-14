@@ -2,7 +2,7 @@
 Authentication routes for OAuth integration
 Handles Google Calendar OAuth flow
 """
-from flask import Blueprint, request, jsonify, session, current_app
+from flask import Blueprint, request, jsonify, session, current_app, redirect
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 import os
@@ -12,6 +12,7 @@ from app.models.user import User
 from app.services.calendar_service import get_calendar_service
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
+oauth_bp = Blueprint('oauth', __name__)
 
 
 def get_db():
@@ -24,6 +25,7 @@ def get_db():
 
 @auth_bp.route('/google/login', methods=['GET'])
 def google_login():
+    print("HIT /api/auth/google/login")
     """
     Initiate Google OAuth flow
     Generates OAuth URL and stores state in session for CSRF protection
@@ -38,7 +40,7 @@ def google_login():
     try:
         # Generate CSRF state token
         state = str(uuid.uuid4())
-        redirect_url = request.args.get('redirect_url', 'http://localhost:3000')
+        redirect_url = os.getenv("GOOGLE_REDIRECT_URI")
         
         # Store state and redirect_url in session (backend managed)
         # In production, consider using Redis for better scalability
@@ -46,11 +48,12 @@ def google_login():
             'created_at': os.environ.get('TIMESTAMP', ''),
             'redirect_url': redirect_url
         }
-        
+        print("GOOGLE_REDIRECT_URI =", repr(redirect_url))
         # Get OAuth URL
         calendar_service = get_calendar_service()
         auth_url = calendar_service.get_auth_url(state)
-        
+        print("AUTH URL SENT TO FRONTEND:")
+        print(auth_url)
         return jsonify({
             'success': True,
             'auth_url': auth_url,
@@ -64,47 +67,41 @@ def google_login():
         }), 500
 
 
-@auth_bp.route('/google/callback', methods=['GET'])
+@oauth_bp.route('/oauth2callback', methods=['GET'])
 def google_callback():
     """
     Google OAuth callback endpoint
-    Exchanges authorization code for tokens and stores in database
+    Exchanges authorization code for tokens, stores in database, and redirects to home page
     
-    GET /api/auth/google/callback
+    GET /oauth2callback
     Query params:
         - code: Authorization code from Google
         - state: CSRF state token (should match stored state)
     
-    Returns:
-        Redirects to frontend with user info or error
+    Redirects to home page with user_id and email in query params
     """
     try:
         code = request.args.get('code')
         state = request.args.get('state')
+        error = request.args.get('error')
+        
+        # Handle user denial
+        if error:
+            return redirect(f'http://localhost:3000?auth=cancelled&error={error}')
         
         if not code or not state:
-            return jsonify({
-                'success': False,
-                'error': 'Missing authorization code or state'
-            }), 400
+            return redirect('http://localhost:3000?auth=failed&error=missing_code_or_state')
         
         # Verify state token (CSRF protection)
         state_data = session.pop(f'oauth_state_{state}', None)
         if not state_data:
-            return jsonify({
-                'success': False,
-                'error': 'Invalid or expired state token'
-            }), 400
+            return redirect('http://localhost:3000?auth=failed&error=invalid_state')
         
         # Exchange code for tokens
         calendar_service = get_calendar_service()
         creds_dict, access_token = calendar_service.get_credentials_from_code(code)
         
         # Extract user info from token
-        from google.auth.transport.requests import Request as GoogleRequest
-        from google.oauth2 import id_token
-        
-        # Build service to get user email
         from googleapiclient.discovery import build
         from google.oauth2.credentials import Credentials
         
@@ -151,28 +148,15 @@ def google_callback():
             new_user._id = result.inserted_id
             user = new_user
         
-        # Generate response with user data (securely)
-        user_data = user.to_dict()
+        # Redirect to home page with user info
+        user_id = str(user._id)
+        redirect_url = f'http://localhost:3000?auth=success&user_id={user_id}&email={user_email}'
         
-        # Redirect to frontend with success
-        redirect_url = state_data.get('redirect_url', 'http://localhost:3000')
-        
-        # In production, encode user data in JWT or secure session
-        # For now, redirect with query params (consider security implications)
-        redirect_url_with_params = f"{redirect_url}?auth=success&user_id={str(user._id)}&email={user_email}"
-        
-        return jsonify({
-            'success': True,
-            'message': 'Google authentication successful',
-            'user': user_data,
-            'redirect_url': redirect_url_with_params
-        }), 200
+        return redirect(redirect_url)
         
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'OAuth callback error: {str(e)}'
-        }), 500
+        error_msg = str(e).replace(' ', '%20')
+        return redirect(f'http://localhost:3000?auth=failed&error={error_msg}')
 
 
 @auth_bp.route('/calendar/status', methods=['GET'])

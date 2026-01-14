@@ -27,6 +27,7 @@ class CalendarService:
             raise ValueError("Google OAuth credentials not configured in environment")
     
     def get_auth_url(self, state: str) -> str:
+        print("ENTERED get_auth_url()")
         """
         Generate Google OAuth authorization URL
         
@@ -36,27 +37,30 @@ class CalendarService:
         Returns:
             OAuth authorization URL
         """
+        redirect_uri = os.getenv("GOOGLE_REDIRECT_URI")
         flow = Flow.from_client_config(
             {
-                'installed': {
-                    'client_id': self.client_id,
-                    'client_secret': self.client_secret,
-                    'auth_uri': 'https://accounts.google.com/o/oauth2/auth',
-                    'token_uri': 'https://oauth2.googleapis.com/token',
-                    'redirect_uris': [self.redirect_uri]
+                "web": {
+                    "client_id": self.client_id,
+                    "client_secret": self.client_secret,
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "redirect_uris": [redirect_uri],
                 }
             },
             scopes=self.SCOPES,
-            redirect_uri=self.redirect_uri,
+            redirect_uri=redirect_uri,
             state=state
         )
-        
-        auth_url, state = flow.authorization_url(
-            access_type='offline',
-            include_granted_scopes='true'
+        print("GOOGLE_REDIRECT_URI =", repr(redirect_uri))
+        auth_url, _ = flow.authorization_url(
+            access_type="offline",
+            include_granted_scopes="true",
+            prompt="consent"
         )
-        
+
         return auth_url
+
     
     def get_credentials_from_code(self, authorization_code: str) -> Tuple[dict, str]:
         """
